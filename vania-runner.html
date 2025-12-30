@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Vania Runner</title>
+
+<style>
+body{margin:0;overflow:hidden;background:#5c94fc;font-family:Arial}
+#game{position:relative;width:100%;height:420px;background:linear-gradient(#5c94fc,#9be7ff);overflow:hidden}
+#ground{position:absolute;bottom:0;width:100%;height:70px;background:#e6e6e6;border-top:2px solid #999}
+#player,#ambon{position:absolute;width:42px;height:42px;bottom:70px;border-radius:6px}
+#player{left:80px;background:#2e7d32;z-index:5}
+#ambon{left:10px;background:#8b0000;z-index:4}
+.name{position:absolute;top:-16px;font-size:12px;color:white;font-weight:bold;text-shadow:1px 1px black}
+.cactus{position:absolute;bottom:70px;width:20px;height:40px;background:#388e3c;border-radius:4px}
+.love{position:absolute;background:pink;padding:4px 8px;border-radius:12px;font-size:12px;font-weight:bold;color:red}
+#score{position:absolute;top:10px;left:10px;color:white;font-size:16px;text-shadow:1px 1px black}
+#overlay{position:absolute;inset:0;display:none;justify-content:center;align-items:center;background:rgba(0,0,0,.7);color:white;font-size:22px;text-align:center}
+button{margin-top:15px;padding:8px 18px;font-size:16px;border:none;border-radius:8px}
+</style>
+</head>
+
+<body>
+<div id="game">
+ <div id="score">❤️ 0 / 100</div>
+ <div id="ambon"><div class="name">Ambon</div></div>
+ <div id="player"><div class="name">Yusuf</div></div>
+ <div id="ground"></div>
+ <div id="overlay"></div>
+</div>
+
+<script>
+const player=document.getElementById("player");
+const ambon=document.getElementById("ambon");
+const scoreEl=document.getElementById("score");
+const overlay=document.getElementById("overlay");
+
+let y=70,vy=0,jumpCount=0;
+const GRAVITY=2.4,JUMP=16;
+
+let speed=6,love=0,gameOver=false;
+let objs=[],cooldown=0;
+
+let ambonX=10;
+const SAFE_DISTANCE=60;
+
+/* INPUT */
+function jump(){
+ if(jumpCount<2 && !gameOver){
+  vy=JUMP;
+  jumpCount++;
+ }
+}
+document.addEventListener("keydown",e=>e.code==="Space"&&jump());
+document.addEventListener("touchstart",e=>{e.preventDefault();jump()},{passive:false});
+
+/* COLLISION */
+function hit(a,b){
+ const r1=a.getBoundingClientRect(),r2=b.getBoundingClientRect();
+ return !(r1.right<r2.left||r1.left>r2.right||r1.bottom<r2.top||r1.top>r2.bottom);
+}
+
+/* SPAWN */
+function spawn(){
+ if(cooldown>0){cooldown--;return;}
+ Math.random()<0.7?spawnCactus():spawnLove();
+ cooldown=65;
+}
+function spawnCactus(){
+ let c=document.createElement("div");
+ c.className="cactus";
+ c.style.left=window.innerWidth+"px";
+ document.getElementById("game").appendChild(c);
+ objs.push({el:c,t:"e"});
+}
+function spawnLove(){
+ let l=document.createElement("div");
+ l.className="love";
+ l.innerText="❤️ VANIA";
+ l.style.left=window.innerWidth+"px";
+ l.style.bottom="130px";
+ document.getElementById("game").appendChild(l);
+ objs.push({el:l,t:"l"});
+}
+
+/* GAME LOOP */
+function loop(){
+ if(gameOver) return;
+
+ speed=6+love*0.04;
+
+ /* PLAYER */
+ y+=vy;vy-=GRAVITY;
+ if(y<=70){y=70;vy=0;jumpCount=0;}
+ player.style.bottom=y+"px";
+
+ /* AMBON STABIL */
+ let dist=player.offsetLeft-ambonX;
+ if(dist>SAFE_DISTANCE){
+  ambonX+=2;
+ }
+ ambonX=Math.max(0,ambonX);
+ ambon.style.left=ambonX+"px";
+
+ spawn();
+
+ for(let i=objs.length-1;i>=0;i--){
+  let o=objs[i];
+  o.el.style.left=o.el.offsetLeft-speed+"px";
+
+  if(o.t==="e" && hit(player,o.el)){
+   end("💔 Yusuf menabrak rintangan!<br>Vania diambil Ambon 😈");
+   return;
+  }
+
+  if(o.t==="l" && hit(player,o.el)){
+   love++;
+   scoreEl.innerText="❤️ "+love+" / 100";
+   o.el.remove();
+   objs.splice(i,1);
+   if(love>=100){
+    end("💍 Selamat menikah dengan Vania 💖");
+    return;
+   }
+  }
+
+  if(o.el.offsetLeft<-100){
+   o.el.remove();
+   objs.splice(i,1);
+  }
+ }
+
+ requestAnimationFrame(loop);
+}
+
+/* END */
+function end(msg){
+ gameOver=true;
+ overlay.style.display="flex";
+ overlay.innerHTML=msg+"<br><button onclick='location.reload()'>Main Lagi</button>";
+}
+
+loop();
+</script>
+</body>
+</html>
